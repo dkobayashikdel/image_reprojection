@@ -15,15 +15,61 @@ find_package(
   sensor_msgs
   tf
   topic_tools
-  )
+)
 
 ## System dependencies are found with CMake's conventions
-find_package(
-  OpenCV REQUIRED COMPONENTS 
-  core
-  imgproc
-  photo
-)
+if($ENV{ROS_DISTRO} STREQUAL "melodic")
+  # include(ExternalProject)
+  # ExternalProject_Add(
+  #   opencv_image_reprojection
+  #   PREFIX opencv_image_reprojection
+  #   # PREFIX ${CMAKE_CURRENT_LIST_DIR}/3rdparty/opencv/
+  #   GIT_REPOSITORY https://github.com/opencv/opencv.git
+  #   GIT_TAG 3.4.0
+  #   UPDATE_COMMAND ""
+  #   COMFIGURE_COMMAND "cmake -DBUILD_LIST=calib3d,core,improc,photo -DBUILD_SHARED_LIBS=OFF -DCMAKE_BUILD_TYPE=RelWithDebInfo -DWITH_CUDA=OFF"
+  #   # COMFIGURE_COMMAND "cmake ${CMAKE_CURRENT_LIST_DIR}/3rdparty/opencv/src/ -DBUILD_LIST=calib3d,core,improc,photo -DBUILD_SHARED_LIBS=OFF -DCMAKE_BUILD_TYPE=RelWithDebInfo -DWITH_CUDA=OFF"
+  #   # BUILD_IN_SOURCE 1
+  #   BUILD_COMMAND "cmake . --build"
+  #   INSTALL_COMMAND "cmake . --build --target install"
+  # )
+  # ExternalProject_Get_Property(opencv_image_reprojection SOURCE_DIR)
+  
+  if(NOT EXISTS ${CMAKE_CURRENT_LIST_DIR}/3rdparty/opencv/share/OpenCV/OpenCVConfig.cmake)
+    file(REMOVE_RECURSE ${CMAKE_CURRENT_LIST_DIR}/3rdparty/opencv)
+    file(MAKE_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/3rdparty/opencv/build)
+    
+    execute_process(
+      COMMAND git clone https://github.com/opencv/opencv.git -b 3.4.0 --depth 1 ${CMAKE_CURRENT_LIST_DIR}/3rdparty/opencv/src
+      WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/3rdparty/opencv/build
+    )
+    execute_process(
+      COMMAND cmake -DBUILD_LIST=calib3d,core,improc,photo -DBUILD_SHARED_LIBS=OFF -DCMAKE_INSTALL_PREFIX=${CMAKE_CURRENT_LIST_DIR}/3rdparty/opencv -DCMAKE_BUILD_TYPE=RelWithDebInfo -DWITH_CUDA=OFF ${CMAKE_CURRENT_LIST_DIR}/3rdparty/opencv/src
+      WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/3rdparty/opencv/build
+    )
+    execute_process(
+      COMMAND cmake --build . --target install
+      WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/3rdparty/opencv/build
+    )
+  endif()
+  
+  find_package(
+    OpenCV 3.3.1 REQUIRED PATHS ${CMAKE_CURRENT_LIST_DIR}/3rdparty/opencv
+    COMPONENTS
+    core
+    imgproc
+    photo
+  )
+  unset(OpenCV_DIR CACHE)
+else()
+  find_package(
+    OpenCV 3.3.1 REQUIRED
+    COMPONENTS
+    core
+    imgproc
+    photo
+  )
+endif()
 
 
 ## Uncomment this if the package has a setup.py. This macro ensures
@@ -137,6 +183,7 @@ catkin_package(
 include_directories(
   include
   ${catkin_INCLUDE_DIRS}
+  ${OpenCV_INCLUDE_DIRS}
 )
 
 ## Declare a C++ library
@@ -159,6 +206,11 @@ add_executable(
 ## Add cmake target dependencies of the executable
 ## same as for the library above
 # add_dependencies(image_reprojection_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+
+# if($ENV{ROS_DISTRO} STREQUAL "melodic" OR $ENV{ROS_DISTRO} STREQUAL "indigo" OR $ENV{ROS_DISTRO} STREQUAL "jade")
+#   add_dependencies(image_reprojection opencv_image_reprojection)
+#   add_dependencies(generate_calibration_file opencv_image_reprojection)
+# endif()
 
 ## Specify libraries to link a library or executable target against
 target_link_libraries(

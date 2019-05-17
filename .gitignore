@@ -30,3 +30,6 @@
 # VSCode
 .vscode/
 
+
+# OpenCV
+image_reprojection/3rdparty/
